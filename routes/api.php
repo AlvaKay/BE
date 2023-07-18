@@ -50,10 +50,16 @@ Route::put('/users/{id}', [TamController::class, 'update']);
 
 
 // PAHN ĐỨC THƠ
+Route::post('/stylists', [ThoController::class, 'updateStylist']);
+
+Route::get('/stylist/{id}', [ThoController::class, 'getStylist']);
+
 Route::get('/is_user', [ThoController::class, 'getIsUser']);
 Route::put('/users/{id}', [ThoController::class, 'update']);
 
-Route::post('/payment-vnpay/{totalPrice}', [ThoController::class, 'payment_VnPay']);
+Route::post('/payment-vnpay', [ThoController::class, 'payment_VnPay']);
+Route::post('/thank', [ThoController::class, 'thanks']);
+
 
 //payments
 Route::get('/payments/{user_id}', [ThoController::class, 'getPaymentsByUserId']);

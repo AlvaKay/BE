@@ -10,7 +10,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use App\Models\history;
 use App\Models\address;
-
+use App\Models\stylist;
 
 use Illuminate\Support\Facades\Auth;
 
@@ -21,6 +21,28 @@ use Illuminate\Support\Facades\DB;
 
 class ThoController extends Controller
 {
+
+    public function updateStylist(Request $request)
+    {
+        $stylist = new Stylist();
+        $stylist->stylist_name = $request->input('stylist_name');
+        $stylist->stylist_image = $request->input('stylist_image');
+        $stylist->stylist_rating = $request->input('stylist_rating');
+        $stylist->shop_id = $request->input('shop_id');
+        $stylist->save();
+
+        return response()->json(['message' => 'Stylist created successfully'], 201);
+    }
+    public function GetStylist($id)
+    {
+        $stylists = Stylist::join('shops', 'shops.shop_id', '=', 'stylists.shop_id')
+            ->where('shops.user_id', $id)
+            ->select('stylists.*','shops.shop_name')
+            ->get();
+    
+        return response()->json($stylists);
+    }
+    
     public function getShopsByUserId($userId)
 {
     // Lấy dữ liệu từ database sử dụng Eloquent hoặc Query Builder
@@ -36,7 +58,6 @@ class ThoController extends Controller
         try {
             // Lấy dữ liệu từ request
             $shopName = $request->input('shop_name');
-            $shopEmail = $request->input('shop_email');
             $shopImage = $request->input('shop_image');
             $shopPhone = $request->input('shop_phone');
             $userid=$request-> input('user_id');
@@ -44,7 +65,6 @@ class ThoController extends Controller
             // Tạo một đối tượng Shop mới
             $newShop = new shop();
             $newShop->shop_name = $shopName;
-            $newShop->shop_email = $shopEmail;
             $newShop->shop_image = $shopImage;
             $newShop->shop_phone = $shopPhone;
             $newShop->is_shop="0";
@@ -129,23 +149,26 @@ class ThoController extends Controller
     
     public function getPayments()
     {
-        $payments = payment::join('shops', 'payments.shop_id', '=', 'shops.shop_id')
+        $payments = Payment::join('shops', 'payments.shop_id', '=', 'shops.shop_id')
             ->join('users', 'payments.user_id', '=', 'users.user_id')
-            ->select('payments.*', 'shops.shop_name', 'shops.shop_image', 'users.user_name')
+            ->join('histories', 'payments.payment_id', '=', 'histories.payment_id')
+            ->join('stylists', 'histories.stylist_id', '=', 'stylists.stylist_id')
+            ->join('services','histories.service_id','=','services.service_id')
+            ->select('payments.*', 'shops.shop_name','services.service_name','stylists.stylist_name','shops.shop_image', 'users.user_name', 'histories.*', 'stylists.stylist_name')
             ->get();
-
+    
         return response()->json($payments);
     }
-    public function getPayment()
-    {
-        $payments = payment::join('shops', 'payments.shop_id', '=', 'shops.shop_id')
-            ->join('users', 'payments.user_id', '=', 'users.user_id')
-            ->select('shops.shop_id', DB::raw('MAX(shops.shop_name) as shop_name'), DB::raw('MAX(shops.shop_image) as shop_image'), DB::raw('SUM(payments.payment_amount) as total_amount'))
-            ->groupBy('shops.shop_id')
-            ->get();
+        public function getPayment()
+        {
+            $payments = payment::join('shops', 'payments.shop_id', '=', 'shops.shop_id')
+                ->join('users', 'payments.user_id', '=', 'users.user_id')
+                ->select('shops.shop_id', DB::raw('MAX(shops.shop_name) as shop_name'), DB::raw('MAX(shops.shop_image) as shop_image'), DB::raw('SUM(payments.payment_amount) as total_amount'))
+                ->groupBy('shops.shop_id')
+                ->get();
 
-        return response()->json($payments);
-    }
+            return response()->json($payments);
+        }
     //Barber Shop
 
     public function destroy($id)
@@ -205,97 +228,83 @@ class ThoController extends Controller
 
 
     // Mo mo
-    public function execPostRequest($url, $data)
+  
+    public function payment_VnPay(Request $request)
     {
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt(
-            $ch,
-            CURLOPT_HTTPHEADER,
-            array(
-                'Content-Type: application/json',
-                'Content-Length: ' . strlen($data)
-            )
-        );
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        //execute post
-        $result = curl_exec($ch);
-        //close connection
-        curl_close($ch);
-        return $result;
-    }
-    public function payment_VnPay($totalPrice) {
-        
-       
-
-
-
+        $totalPrice = $request->input('totalPrice');
+        $paymentDate = Carbon::now(); // Lấy ngày thanh toán hiện tại
+    
         $vnp_Url = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-        $vnp_Returnurl = "http://localhost:3000/thankfull";
-        $vnp_TmnCode = "HMEJ9HK0";//Mã website tại VNPAY 
-        $vnp_HashSecret = "CLTOHNQVRSFMUVOWUFVAQLEATTNJRSJP"; //Chuỗi bí mật
-
-        $vnp_TxnRef = Carbon::now()->timestamp; //Mã đơn hàng. Trong thực tế Merchant cần insert đơn hàng vào DB và gửi mã này sang VNPAY
-        $vnp_OrderInfo = "Da Thanh Toan";
-        $vnp_OrderType = "100000";
-        $vnp_Amount = ($totalPrice*1000)*100;
-        $vnp_Locale = "vn";
-        $vnp_BankCode = "NCB";
-        $vnp_IpAddr = $_SERVER['REMOTE_ADDR'];
-        $inputData = array(
+        $vnp_Returnurl = "http://localhost:3000/Thank";
+        $vnp_TmnCode = "HMEJ9HK0"; // Mã website tại VNPAY
+        $vnp_HashSecret = "CLTOHNQVRSFMUVOWUFVAQLEATTNJRSJP"; // Chuỗi bí mật
+    
+        $vnp_TxnRef = rand(00,9990); // Mã đơn hàng
+    
+        $inputData = [
             "vnp_Version" => "2.1.0",
             "vnp_TmnCode" => $vnp_TmnCode,
-            "vnp_Amount" => $vnp_Amount,
+            "vnp_Amount" => ($totalPrice * 400) * 100,
+            "vnp_CurrCode" => "VND",
+            "vnp_IpAddr" => $_SERVER['REMOTE_ADDR'],
             "vnp_Command" => "pay",
             "vnp_CreateDate" => date('YmdHis'),
-            "vnp_CurrCode" => "VND",
-            "vnp_IpAddr" => $vnp_IpAddr,
-            "vnp_Locale" => $vnp_Locale,
-            "vnp_OrderInfo" => $vnp_OrderInfo,
-            "vnp_OrderType" => $vnp_OrderType,
+            "vnp_Locale" => "vn",
+            "vnp_OrderInfo" => "Da Thanh Toan",
+            "vnp_OrderType" => "100000",
             "vnp_ReturnUrl" => $vnp_Returnurl,
             "vnp_TxnRef" => $vnp_TxnRef,
-        );
-
+            "payment_date" => $paymentDate,
+            "created_at" => Carbon::now(),
+        ];
+    
+        $vnp_BankCode = "NCB";
         if (isset($vnp_BankCode) && $vnp_BankCode != "") {
             $inputData['vnp_BankCode'] = $vnp_BankCode;
         }
-        // if (isset($vnp_Bill_State) && $vnp_Bill_State != "") {
-        //     $inputData['vnp_Bill_State'] = $vnp_Bill_State;
-        // }
-
-        //var_dump($inputData);
+    
         ksort($inputData);
-        $query = "";
-        $i = 0;
-        $hashdata = "";
-        foreach ($inputData as $key => $value) {
-            if ($i == 1) {
-                $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
-            } else {
-                $hashdata .= urlencode($key) . "=" . urlencode($value);
-                $i = 1;
-            }
-            $query .= urlencode($key) . "=" . urlencode($value) . '&';
-        }
-
-        $vnp_Url = $vnp_Url . "?" . $query;
-        if (isset($vnp_HashSecret)) {
-            $vnpSecureHash =   hash_hmac('sha512', $hashdata, $vnp_HashSecret);//  
-            $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
-        }
-        $returnData = array('code' => '00'
-            , 'message' => 'success'
-            , 'data' => $vnp_Url);
-
+        $query = http_build_query($inputData);
+    
+        $vnpSecureHash = hash_hmac('sha512', $query, $vnp_HashSecret);
+        $vnp_Url .= "?" . $query . "&vnp_SecureHash=" . $vnpSecureHash;
+    
+        $returnData = [
+            'code' => '00',
+            'message' => 'success',
+            'data' => $vnp_Url,
+        ];
+    
+        // Thêm dữ liệu vào controller
+    
+    
         return response()->json($returnData);
-        
-        
-  
+    }
+    public function thanks(Request $request)
+    {
+      
+        $vnp_Amount = $request->input('vnp_Amount');
 
-        }
+        $vnp_PayDate = $request->input('vnp_PayDate');
+
+       
+        // Trích xuất các thông tin cần thiết từ yêu cầu
+    
+        // Tạo một instance của mô hình Payment
+        $payment = new Payment;
+    
+        // Gán dữ liệu vào thuộc tính của mô hình Payment
+        $payment->payment_amount = $vnp_Amount;
+        $payment->payment_date = $vnp_PayDate;
+
+       
+        // Gán các thuộc tính khác tương ứng
+    
+        // Lưu bản ghi bằng phương thức save()
+        $payment->save();
+    
+        return response()->json(['message' => 'Payment data saved successfully']);
+    }
+
     }
 
