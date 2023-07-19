@@ -15,7 +15,6 @@ return new class extends Migration
             $table->increments('stylist_id');
             $table->string('stylist_name');
             $table->string('stylist_image')->nullable();
-            $table->float('stylist_rating')->nullable();
             $table->unsignedInteger('shop_id');
             $table->timestamps();
     

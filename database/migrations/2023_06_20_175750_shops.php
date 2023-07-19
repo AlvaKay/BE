@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('shop_name');
             $table->string('shop_image')->nullable();
             $table->string('shop_phone');
-            $table->float('shop_rating')->nullable();
             $table->unsignedInteger('user_id'); // Đổi kiểu dữ liệu thành unsignedInteger
+            $table->boolean('is_shop')->default(false);
             $table->timestamps();
         
             $table->foreign('user_id')->references('user_id')->on('users');

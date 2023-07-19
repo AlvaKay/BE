@@ -41,13 +41,21 @@ Route::post('/login', [TrungController::class, 'login']);
 // lấy thông tin user.
 Route::get('/users', [TrungController::class, 'getUsers']);
 
+// lấy thông tin user từ history
+Route::get('/history/user', [TrungController::class, 'gethistory_user']);
+
+
+
+
 
 // VÕ THÀNH TÂM
 // users
 Route::get('/users', [TamController::class, 'getUsers']);
 Route::get('/users/{users_id}', [TamController::class, 'getUsersId']);
 Route::put('/users/{id}', [TamController::class, 'update']);
-
+//Rating
+Route::post('/rating', [TamController::class, 'storeRating']);
+Route::get('/ratings/{shop_id}', [TamController::class, 'getRatingsWithUserNames']);
 
 // PAHN ĐỨC THƠ
 Route::post('/stylists', [ThoController::class, 'updateStylist']);
@@ -59,6 +67,14 @@ Route::put('/users/{id}', [ThoController::class, 'update']);
 
 Route::post('/payment-vnpay', [ThoController::class, 'payment_VnPay']);
 Route::post('/thank', [ThoController::class, 'thanks']);
+
+Route::post('/addstylist', [ThoController::class, 'addStylist']);
+Route::delete('/stylists/{user_id}/{stylist_id}', [ThoController::class, 'deleteStylist']);
+
+
+Route::get('/get_history_user/{user_id}',[ThoController::class, 'getHistoryBooking']);
+
+Route::get('/getbookingdetail/{history_id}', [ThoController::class, 'getBookingDetail']);
 
 
 //payments

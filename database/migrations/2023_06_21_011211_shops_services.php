@@ -15,6 +15,8 @@ return new class extends Migration
             $table->unsignedInteger('shop_id');
             $table->unsignedInteger('service_id');
             $table->decimal('service_price', 8, 2);
+            $table->string('service_image')->nullable();
+
 
             $table->foreign('shop_id')->references('shop_id')->on('shops');
             $table->foreign('service_id')->references('service_id')->on('services');

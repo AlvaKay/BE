@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('combos_services', function (Blueprint $table) {
+        Schema::create('combo_services', function (Blueprint $table) {
             $table->unsignedInteger('combo_id');
             $table->unsignedInteger('service_id');
     
-            $table->foreign('combo_id')->references('combo_id')->on('combos');
+            $table->foreign('combo_id')->references('combo_id')->on('combo');
             $table->foreign('service_id')->references('service_id')->on('services');
             $table->timestamps();
         });

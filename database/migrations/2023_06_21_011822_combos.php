@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('combos', function (Blueprint $table) {
+        Schema::create('combo', function (Blueprint $table) {
             $table->increments('combo_id');
             $table->string('combo_name');
             $table->text('combo_description');

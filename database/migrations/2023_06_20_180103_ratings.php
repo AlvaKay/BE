@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedInteger('user_id');
             $table->unsignedInteger('shop_id');
             $table->unsignedInteger('rating_star');
+            $table->text('content');
 
             $table->foreign('user_id')->references('user_id')->on('users');
             $table->foreign('shop_id')->references('shop_id')->on('shops');

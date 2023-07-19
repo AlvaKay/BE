@@ -17,8 +17,9 @@ return new class extends Migration
             $table->string('user_password');
             $table->string('user_phone');
             $table->string('user_email')->unique();
-            $table->enum('user_type', ['B', 'C']);
+            $table->enum('user_type', ['B', 'C'])->default("C");
             $table->boolean('is_admin')->default(false);
+            $table->boolean('is_user')->default(false);
             $table->timestamps();
         });
     }

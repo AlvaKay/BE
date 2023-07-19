@@ -21,6 +21,92 @@ use Illuminate\Support\Facades\DB;
 
 class ThoController extends Controller
 {
+   public function getBookingDetail($historyId)
+    {
+        // Lấy thông tin chi tiết lịch đặt từ cơ sở dữ liệu
+        $bookingDetail = History::join('users', 'histories.user_id', '=', 'users.user_id')
+        ->join('payments', 'histories.payment_id', '=', 'payments.payment_id')
+        ->join('stylists', 'histories.stylist_id', '=', 'stylists.stylist_id')
+        ->leftJoin('combo', 'histories.combo_id', '=', 'combo.combo_id')
+        ->leftJoin('services', 'histories.service_id', '=', 'services.service_id')
+        ->select(
+            'users.user_name',
+            'users.user_phone',
+            'users.user_address',
+            'payments.payment_amount as price',
+            'stylists.stylist_name',
+            'histories.appointment_date',
+            'histories.appointment_time',
+            'combo.combo_name',
+            'services.service_name'
+        )
+        ->where('histories.history_id', $historyId)
+        ->first();
+    
+    // Kiểm tra xem có lịch đặt tồn tại hay không
+    if (!$bookingDetail) {
+        return response()->json(['error' => 'Lịch đặt không tồn tại'], 404);
+    }
+    
+    return response()->json($bookingDetail);
+    
+    }
+    public function getHistoryBooking($shopId)
+{
+    $currentDate = Carbon::now()->toDateString(); // Lấy ngày hiện tại
+
+    $history = History::join('users', 'histories.user_id', '=', 'users.user_id')
+        ->where('histories.shop_id', $shopId)
+        ->whereDate('histories.appointment_date', '=', $currentDate) // So sánh ngày hiện tại
+        ->select('histories.billing_code', 'users.user_name', 'histories.history_id')
+        ->get();
+
+    return $history;
+}
+
+
+public function deleteStylist($user_id,$stylist_id)
+{
+    // Xóa stylist với shop_id cụ thể
+  Stylist::join('shops', 'stylists.shop_id', '=', 'shops.shop_id')
+        ->join('users', 'shops.user_id', '=', 'users.user_id')
+        ->where('shops.user_id', $user_id)
+        ->where('stylists.stylist_id', $stylist_id)
+        ->delete();
+        return response()->json(['message' => 'xóa stylist thành công'], 200);}
+        public function addStylist(Request $request)
+        {
+            // Lấy dữ liệu từ request
+            $stylistName = $request->input('stylistName');
+            $stylistImage = $request->input('stylistImage');
+            $userId = $request->input('user_id'); // Thay đổi tên biến thành $userId
+        
+            // Kiểm tra xem user có shop tương ứng không
+            $shop = Shop::where('user_id', $userId)->first();
+        
+            if (!$shop) {
+                return response()->json(['error' => 'User không có shop tương ứng'], 404);
+            }
+        
+            // Kiểm tra xem stylist đã tồn tại trong shop hay chưa
+            $existingStylist = Stylist::where('stylist_name', $stylistName)
+                ->where('shop_id', $shop->shop_id)
+                ->first();
+        
+            if ($existingStylist) {
+                return response()->json(['error' => 'Stylist đã tồn tại trong shop'], 400);
+            }
+        
+            // Tạo mới stylist
+            $stylist = new Stylist();
+            $stylist->stylist_name = $stylistName;
+            $stylist->stylist_image = $stylistImage;
+            $stylist->shop_id = $shop->shop_id;
+            $stylist->save();
+        
+            return response()->json(['message' => 'Stylist created successfully'], 200);
+        }
+        
 
     public function updateStylist(Request $request)
     {
